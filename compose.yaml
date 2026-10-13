@@ -1,0 +1,91 @@
+name: minevision
+services:
+  database:
+    image: postgis/postgis:16-3.5
+    environment:
+      POSTGRES_DB: minevision
+      POSTGRES_USER: minevision
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-minevision-local-db}
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U minevision -d minevision"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: ["redis_data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  backend:
+    build: ./backend
+    environment: &backend_env
+      APP_ENV: development
+      DB_DRIVER: pgsql
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_DATABASE: minevision
+      DB_USERNAME: minevision
+      DB_PASSWORD: ${DB_PASSWORD:-minevision-local-db}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-change-this-long-minevision-jwt-secret-2026}
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      REDIS_HOST: redis
+      GEO_URL: http://geoprocessing:8000
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-only-minevision-internal-token}
+      STORAGE_DRIVER: local
+      COPERNICUS_CLIENT_ID: ${COPERNICUS_CLIENT_ID:-}
+      COPERNICUS_CLIENT_SECRET: ${COPERNICUS_CLIENT_SECRET:-}
+      DEMO_SEED: "true"
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-MineVision!2026}
+    ports: ["127.0.0.1:9501:9501"]
+    depends_on:
+      database: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    volumes: ["backend_data:/opt/www/runtime"]
+    healthcheck:
+      test: ["CMD", "php", "bin/health.php"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+  worker:
+    build: ./backend
+    entrypoint: ["php", "bin/worker.php"]
+    environment: *backend_env
+    depends_on:
+      backend: {condition: service_healthy}
+      geoprocessing: {condition: service_healthy}
+    volumes: ["backend_data:/opt/www/runtime"]
+  geoprocessing:
+    build: ./geoprocessing
+    # O volume de objetos também é usado pelo backend PHP, que o cria como root.
+    # O serviço precisa conseguir materializar os PNGs de índices nesse volume.
+    user: "0:0"
+    environment:
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-only-minevision-internal-token}
+      DATA_ROOT: /data
+      STORAGE_DRIVER: local
+      COPERNICUS_CLIENT_ID: ${COPERNICUS_CLIENT_ID:-}
+      COPERNICUS_CLIENT_SECRET: ${COPERNICUS_CLIENT_SECRET:-}
+    volumes: ["geo_data:/data", "backend_data:/backend-runtime"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+  frontend:
+    build: ./frontend
+    environment:
+      BACKEND_URL: http://backend:9501
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on:
+      backend: {condition: service_healthy}
+volumes:
+  postgres_data:
+  redis_data:
+  backend_data:
+  geo_data:

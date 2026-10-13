@@ -1,0 +1,125 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "MineVision API",
+    "version": "1.0.0",
+    "description": "API REST do MineVision. Rotas de dados exigem um token Bearer obtido no login."
+  },
+  "servers": [
+    { "url": "/api/v1", "description": "Servidor atual" }
+  ],
+  "paths": {
+    "/docs": {
+      "get": {
+        "summary": "Página da documentação",
+        "responses": { "200": { "description": "Página HTML da documentação" } }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "summary": "Especificação OpenAPI",
+        "responses": { "200": { "description": "Documento OpenAPI" } }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Autentica um usuário",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Sessão criada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Session" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "summary": "Renova uma sessão",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RefreshRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Tokens renovados", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Session" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "Retorna o usuário autenticado",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Usuário da sessão" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/monitoring-areas/{id}/risk-context": {
+      "get": {
+        "summary": "Calcula o contexto regulatório de uma área monitorada",
+        "description": "Cruza a área com camadas cadastradas e retorna prioridades para revisão humana. Em PostGIS, a sobreposição é geométrica; SQLite é apenas uma aproximação de desenvolvimento.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } }],
+        "responses": {
+          "200": { "description": "Contexto com fontes, referências e área de sobreposição" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "description": "Área não encontrada" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    },
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "format": "password" }
+        }
+      },
+      "RefreshRequest": {
+        "type": "object",
+        "required": ["refresh_token"],
+        "properties": { "refresh_token": { "type": "string" } }
+      },
+      "Session": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "access_token": { "type": "string" },
+              "refresh_token": { "type": "string" }
+            }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "integer" },
+              "message": { "type": "string" },
+              "request_id": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Autenticação necessária ou sessão inválida",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      }
+    }
+  }
+}

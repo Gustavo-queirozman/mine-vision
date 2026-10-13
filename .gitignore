@@ -1,0 +1,43 @@
+# Segredos e configurações locais (os arquivos .env.example devem ser versionados)
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Dependências e artefatos do frontend
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# Dependências, caches e artefatos Python
+.venv/
+venv/
+ENV/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.py[cod]
+
+# Dependências e arquivos de execução do backend PHP
+vendor/
+runtime/
+
+# Dados locais, arquivos temporários e saídas geradas por análises/relatórios
+data/
+output/
+tmp/
+storage/
+*.sqlite
+*.sqlite3
+*.db
+
+# Logs, editor e sistema operacional
+*.log
+*.pid
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
