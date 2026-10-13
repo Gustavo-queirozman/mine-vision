@@ -16,10 +16,10 @@ final class MonitoringService
   return $this->repo->transaction(fn()=>array_map(fn($image)=>$this->repo->create('satellite_images',$image,$tenant),$this->provider->searchImages($area,$data['start'],$data['end'],['sources'=>array_values(array_unique($sources))])));
  }
  public function map(Tenant $tenant): array {
-  $tables=['mines','monitoring_areas','compliance_layers','change_detections','alerts','inspections','operational_assets','exploration_records'];
+  $tables=['mines','monitoring_areas','mineral_occurrences','compliance_layers','change_detections','alerts','inspections','operational_assets','exploration_records'];
   $records=[];$index=[];
   foreach($tables as $table){
-   try{$records[$table]=$this->repo->all($table,$tenant);}catch(\PDOException $e){if(in_array($table,['operational_assets','exploration_records'],true)){$records[$table]=[];continue;}throw $e;}
+   try{$records[$table]=$this->repo->all($table,$tenant);}catch(\PDOException $e){if(in_array($table,['operational_assets','exploration_records','mineral_occurrences'],true)){$records[$table]=[];continue;}throw $e;}
    $index[$table]=[];foreach($records[$table] as $record)$index[$table][(int)$record['id']]=$record;
   }
   $result=[];

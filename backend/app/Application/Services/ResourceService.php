@@ -9,7 +9,7 @@ final class ResourceService
  public function __construct(private TenantRepository $repo,private AuthService $auth) {}
  public function authorize(string $table,Tenant $tenant,string $method): void {
   if($method==='GET')return;
-  if(in_array($table,['satellite_images','spectral_indices','change_detections','analysis_jobs','inspection_images','audit_events'],true))throw new ApiException(405,'Use o fluxo específico deste recurso.');
+  if(in_array($table,['satellite_images','spectral_indices','change_detections','analysis_jobs','inspection_images','audit_events','mineral_occurrences'],true))throw new ApiException(405,'Use o fluxo específico deste recurso.');
   if(in_array($table,['companies','users','notification_rules','compliance_layers'],true))$tenant->allow(['ADMIN']);
   elseif($table==='inspections')$tenant->allow(['ADMIN','ANALYST','FIELD_TECHNICIAN']);
   else $tenant->allow(['ADMIN','ANALYST']);

@@ -44,3 +44,25 @@ describe("image pagination", () => {
     expect(screen.getByText("Página 1 de 2")).toBeTruthy();
   });
 });
+
+describe("regulation module", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sessionStorage.setItem("minevision.access_token", "test");
+    vi.mocked(api).mockImplementation(async path => {
+      if (path === "/auth/me") return { id: 1, name: "Admin" };
+      if (path === "/dashboard/summary") return { counts: {}, recent_alerts: [] };
+      return { data: [], meta: { page: 1, per_page: 100, total: 0, last_page: 1 } };
+    });
+  });
+
+  it("centralizes regulatory records outside the generic registrations", async () => {
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    await user.click(screen.getByRole("button", { name: "Regulamentação" }));
+    expect(await screen.findByRole("heading", { name: "Regulamentação em um único lugar." })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Camadas regulatórias" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Licenças e estruturas" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Regras de acompanhamento" })).toBeTruthy();
+  });
+});

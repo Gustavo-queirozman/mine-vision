@@ -17,18 +17,22 @@ final class IntelligenceService
   $optical=count(array_filter($images,fn($i)=>$i['satellite']==='SENTINEL-2'&&$i['processing_status']==='COMPLETED'));
   $risk=(new ComplianceService($this->repo))->contextForArea($areaId,$tenant);
   $records=$this->repo->all('exploration_records',$tenant,['monitoring_area_id'=>$areaId]);
+  try{$occurrences=$this->repo->all('mineral_occurrences',$tenant,['monitoring_area_id'=>$areaId]);}catch(\PDOException){$occurrences=[];}
   $best=$detections?max(array_column($detections,'confidence')):0;
   $affected=array_sum(array_column($detections,'affected_area_hectares'));
   $evidence=min(40,round($best*.4))+min(20,count($detections)*10)+min(15,$optical*3)+min(10,$radar*2);
   $access=15; // kept explicit until roads/infrastructure data is connected.
   $regulatoryPenalty=round($risk['risk_score']*.15);
-  $fieldEvidence=min(15,count($records)*3);$score=max(0,min(100,$evidence+$access+$fieldEvidence-$regulatoryPenalty));
+  $fieldEvidence=min(15,count($records)*3);
+  $officialEvidence=min(20,count($occurrences)*5);
+  $score=max(0,min(100,$evidence+$access+$fieldEvidence+$officialEvidence-$regulatoryPenalty));
   $band=$score>=70?'PRIORITIZE_FIELD_VALIDATION':($score>=45?'REVIEW_GEOLOGY':($score>=20?'MONITOR':'INSUFFICIENT_EVIDENCE'));
   return ['monitoring_area_id'=>$areaId,'opportunity_score'=>$score,'recommendation'=>$band,'components'=>[
    ['name'=>'assinatura_espectral','points'=>min(40,round($best*.4)),'evidence'=>count($detections).' alvo(s), confiança máxima '.round($best,1).'%'],
    ['name'=>'cobertura_satelital','points'=>min(25,min(15,$optical*3)+min(10,$radar*2)),'evidence'=>"$optical óptica(s), $radar radar"],
    ['name'=>'acesso_base','points'=>$access,'evidence'=>'pontuação-base; conecte camada de vias para cálculo espacial'],
    ['name'=>'evidencia_de_campo','points'=>$fieldEvidence,'evidence'=>count($records).' registro(s) de amostra/sondagem associado(s)'],
+   ['name'=>'ocorrencias_oficiais_sgb','points'=>$officialEvidence,'evidence'=>count($occurrences).' ocorrência(s) de ouro do GeoSGB na área; não são reservas certificadas'],
    ['name'=>'risco_regulatorio','points'=>-$regulatoryPenalty,'evidence'=>'prioridade '.$risk['priority']],
   ],'affected_hectares'=>round($affected,2),'disclaimer'=>'Score explicável de priorização. Não confirma ocorrência, teor, recurso ou reserva mineral; requer revisão geológica, direitos minerários e validação em campo.'];
  }

@@ -23,8 +23,9 @@ final class Schema
  'audit_events'=>['actor_user_id'=>'id:users','action'=>'text!','resource_type'=>'text!','resource_id'=>'positive','payload_json'=>'json'],
  'operational_assets'=>['mine_id'=>'id:mines!','kind'=>'enum:TAILINGS_DAM,LICENSE,DRONE_SURVEY!','name'=>'text!','status'=>'text!','due_at'=>'datetime','geometry'=>'polygon','metadata_json'=>'json'],
  'exploration_records'=>['mine_id'=>'id:mines!','monitoring_area_id'=>'id:monitoring_areas','sample_code'=>'text!','record_type'=>'enum:SAMPLE,DRILLHOLE!','lithology'=>'text','depth_m'=>'positive','grade_gpt'=>'positive','geometry'=>'point','metadata_json'=>'json'],
+ 'mineral_occurrences'=>['monitoring_area_id'=>'id:monitoring_areas!','name'=>'text!','source'=>'enum:SGB!','external_id'=>'text!','substance'=>'text!','occurrence_type'=>'text','economic_status'=>'text','importance'=>'text','description'=>'text','source_url'=>'url!','source_updated_at'=>'date','geometry'=>'point!','metadata_json'=>'json'],
  ];
- public const TABLES=['companies','users','mines','monitoring_areas','compliance_layers','satellite_images','spectral_indices','change_detections','alerts','inspections','inspection_images','reports','notification_rules','analysis_jobs','audit_events','operational_assets','exploration_records'];
+ public const TABLES=['companies','users','mines','monitoring_areas','compliance_layers','satellite_images','spectral_indices','change_detections','alerts','inspections','inspection_images','reports','notification_rules','analysis_jobs','audit_events','operational_assets','exploration_records','mineral_occurrences'];
  public static function table(string $resource): string {
   $table=str_replace('-','_',$resource);
   if (!in_array($table,self::TABLES,true)) throw new ApiException(404,'Recurso não encontrado.');

@@ -119,8 +119,15 @@ Saídas de relatórios, dados temporários, builds, caches, dependências instal
 Além do monitoramento óptico e radar Sentinel, a API disponibiliza recursos de decisão explicáveis:
 
 - `GET /api/v1/monitoring-areas/{id}/opportunity-score`: prioriza a validação de alvos a partir de assinaturas espectrais, cobertura Sentinel e contexto regulatório. Não estima reservas.
+- `POST /api/v1/monitoring-areas/{id}/mineral-exploration/sync`: consulta a camada pública RECMIN do SGB/GeoSGB na área monitorada, importa apenas ocorrências cujo registro menciona ouro e apresenta o cruzamento com análises `GOLD_POTENTIAL` já concluídas.
 - `POST /api/v1/copilot/query`: responde a perguntas usando somente o contexto da empresa autenticada; informe `question` e, opcionalmente, `monitoring_area_id`.
 - `POST /api/v1/alerts/{id}/create-inspection`: transforma um alerta aberto em inspeção atribuída, usando `inspector_user_id`, `scheduled_at` e `notes`.
 - `GET /api/v1/audit-events`: fornece a trilha de criação, alteração e remoção para administradores e analistas.
 
 As conclusões automatizadas são apoio à decisão e precisam de validação geológica, de campo e regulatória antes de qualquer ação operacional.
+
+### Exploração mineral e fontes oficiais
+
+O módulo **Exploração mineral** usa o serviço WFS público do [GeoSGB / Serviço Geológico do Brasil](https://opendata.sgb.gov.br/pages/sobre/) (camada RECMIN – Ocorrências de Recursos Minerais). Uma ocorrência pode ser afloramento, depósito, mina ou garimpo; portanto, o sistema a exibe como evidência geológica, não como recurso ou reserva certificada. O módulo também mostra as análises ópticas Sentinel-2 de alteração hidrotermal e óxidos de ferro. Essas assinaturas são proxies: elas não detectam ouro diretamente.
+
+Para verificar disponibilidade, titularidade e fases de direitos minerários, use também a sincronização de contexto regulatório baseada no [SIGMINE/ANM](https://www.gov.br/anm/pt-br/acesso-a-informacao/dados-abertos/bases-de-dados/bases-de-dados/). A existência de ocorrência no SGB ou de processo na ANM não autoriza atividade mineral e não confirma viabilidade econômica.

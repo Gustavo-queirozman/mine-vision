@@ -28,17 +28,18 @@ function leaflet() {
   return leafletLoader;
 }
 
-const colors: Record<string, string> = { mines: "#1e88e5", monitoring_areas: "#d99a32", compliance_layers: "#e05263", change_detections: "#8b5cf6", alerts: "#e05263", inspections: "#16856d" };
-const layerNames: Record<string, string> = { mines: "Minas", monitoring_areas: "Áreas", compliance_layers: "Contexto regulatório", change_detections: "Detecções", alerts: "Alertas", inspections: "Inspeções" };
+const colors: Record<string, string> = { mines: "#1e88e5", monitoring_areas: "#d99a32", mineral_occurrences: "#f4b942", compliance_layers: "#e05263", change_detections: "#8b5cf6", alerts: "#e05263", inspections: "#16856d" };
+const layerNames: Record<string, string> = { mines: "Minas", monitoring_areas: "Áreas", mineral_occurrences: "Ocorrências oficiais de ouro", compliance_layers: "Contexto regulatório", change_detections: "Detecções", alerts: "Alertas", inspections: "Inspeções" };
 const layerDescriptions: Record<string, string> = {
   mines: "Polígonos das minas cadastradas.",
   monitoring_areas: "Áreas acompanhadas dentro das minas.",
+  mineral_occurrences: "Ocorrências de ouro do SGB/GeoSGB; evidências geológicas, não reservas certificadas.",
   compliance_layers: "Camadas oficiais e restrições regulatórias importadas.",
   change_detections: "Áreas onde a análise identificou mudança.",
   alerts: "Ocorrências que exigem acompanhamento da equipe.",
   inspections: "Inspeções de campo e seus locais associados.",
 };
-const layerOrder = ["mines", "monitoring_areas", "compliance_layers", "change_detections", "alerts", "inspections"];
+const layerOrder = ["mines", "monitoring_areas", "mineral_occurrences", "compliance_layers", "change_detections", "alerts", "inspections"];
 const baseLayers = {
   satellite: { url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attribution: "Tiles © Esri" },
   terrain: { url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", attribution: "© OpenStreetMap contributors © CARTO" },

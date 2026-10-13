@@ -50,9 +50,11 @@ final class Seeder
                 [
                     'name' => 'Mina Paracatu (Morro do Ouro)',
                     'owner' => 'Kinross Brasil Mineração S.A.',
-                    'latitude' => -17.220833, 'longitude' => -46.875000,
+                    // SGB/GeoSGB RECMIN 10160 (Morro do Ouro), WGS84.
+                    'latitude' => -17.186846, 'longitude' => -46.879551,
                     'municipality' => 'Paracatu', 'state' => 'MG',
-                    'description' => 'Operação aurífera a céu aberto em Paracatu. Coordenada aproximada do centro da propriedade descrita no relatório técnico NI 43-101 da Kinross.',
+                    'description' => 'Operação aurífera a céu aberto em Paracatu. Referência espacial inicial: ocorrência Morro do Ouro (RECMIN/SGB ID 10160); a área monitorada é apenas uma referência operacional e não delimita direito minerário.',
+                    'monitoring_offset' => 0.012,
                 ],
                 [
                     'name' => 'Complexo Cuiabá',
@@ -83,7 +85,7 @@ final class Seeder
                     'mineral' => 'ouro',
                     'geometry' => ['type' => 'Point', 'coordinates' => [$site['longitude'], $site['latitude']]],
                 ], $tenant);
-                $geometry = $this->monitoringSquare((float)$site['longitude'], (float)$site['latitude']);
+                $geometry = $this->monitoringSquare((float)$site['longitude'], (float)$site['latitude'], (float)($site['monitoring_offset'] ?? 0.006));
                 $repo->create('monitoring_areas', [
                     'mine_id' => $mine['id'],
                     'name' => 'Área operacional de referência',
@@ -96,9 +98,8 @@ final class Seeder
         });
     }
 
-    private function monitoringSquare(float $longitude, float $latitude): array
+    private function monitoringSquare(float $longitude, float $latitude, float $offset = 0.006): array
     {
-        $offset = 0.006;
         return ['type' => 'Polygon', 'coordinates' => [[
             [$longitude - $offset, $latitude - $offset],
             [$longitude + $offset, $latitude - $offset],

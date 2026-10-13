@@ -49,7 +49,10 @@ final class TenantRepository
   $all=[];$page=1;do{$result=$this->list($table,$tenant,[...$filters,'per_page'=>100,'page'=>$page++]);$all=[...$all,...$result['data']];}while($page<=$result['meta']['last_page']);return $all;
  }
  private function binding(string $field,mixed $value,string $table): array {
-  if($field==='geometry'&&$value!==null&&$this->pg())return [$table==='mines'?'ST_SetSRID(ST_GeomFromGeoJSON(?),4326)':'ST_Multi(ST_SetSRID(ST_GeomFromGeoJSON(?),4326))',json_encode($value,JSON_THROW_ON_ERROR)];
+  if($field==='geometry'&&$value!==null&&$this->pg()){
+   $rule=Schema::RESOURCES[$table]['geometry']??'';
+   return [str_starts_with($rule,'point')?'ST_SetSRID(ST_GeomFromGeoJSON(?),4326)':($table==='mines'?'ST_SetSRID(ST_GeomFromGeoJSON(?),4326)':'ST_Multi(ST_SetSRID(ST_GeomFromGeoJSON(?),4326))'),json_encode($value,JSON_THROW_ON_ERROR)];
+  }
   if(is_array($value))$value=json_encode($value,JSON_THROW_ON_ERROR);
   if(is_bool($value))$value=$this->pg()?($value?'true':'false'):(int)$value;
   return ['?',$value];
