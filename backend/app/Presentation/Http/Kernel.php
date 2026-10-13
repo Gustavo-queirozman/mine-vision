@@ -46,6 +46,8 @@ final class Kernel
   if($path==='/api/v1/copilot/query'&&$method==='POST')return $this->ok((new IntelligenceService($this->repo))->copilot($input,$tenant));
   if(preg_match('#^/api/v1/monitoring-areas/(\d+)/risk-context$#',$path,$matches)&&$method==='GET')return $this->ok((new ComplianceService($this->repo))->contextForArea((int)$matches[1],$tenant));
   if(preg_match('#^/api/v1/monitoring-areas/(\d+)/opportunity-score$#',$path,$matches)&&$method==='GET')return $this->ok((new IntelligenceService($this->repo))->opportunity((int)$matches[1],$tenant));
+  if(preg_match('#^/api/v1/monitoring-areas/(\d+)/timeline$#',$path,$matches)&&$method==='GET')return $this->ok((new IntelligenceService($this->repo))->timeline((int)$matches[1],$tenant));
+  if(preg_match('#^/api/v1/mines/(\d+)/benchmark$#',$path,$matches)&&$method==='GET')return $this->ok((new IntelligenceService($this->repo))->benchmark((int)$matches[1],$tenant));
   if(preg_match('#^/api/v1/monitoring-areas/(\d+)/official-layers/sync$#',$path,$matches)&&$method==='POST')return $this->ok((new OfficialLayerSyncService($this->repo))->sync((int)$matches[1],$tenant));
   if(preg_match('#^/api/v1/mines/(\d+)/monitoring-areas$#',$path,$matches)&&$method==='GET'){$this->repo->find('mines',(int)$matches[1],$tenant);return ['status'=>200,'body'=>$this->repo->list('monitoring_areas',$tenant,[...$query,'mine_id'=>(int)$matches[1]])];}
   if(preg_match('#^/api/v1/monitoring-areas/(\d+)/(?:satellite-images|mock-images)$#',$path,$matches)&&$method==='POST')return $this->ok($this->monitoring->acquire((int)$matches[1],$input,$tenant),201);

@@ -40,7 +40,7 @@ final class JobService
     $detection=null;$alert=null;
     if($result['affected_area_hectares']>0){
      $geometry=GeoJson::validate($result['geometry']);
-     $isProspection=($row['analysis_type']??'CHANGE_DETECTION')==='GOLD_POTENTIAL';$type=$isProspection?'GOLD_POTENTIAL':'SURFACE_CHANGE';
+     $isProspection=($row['analysis_type']??'CHANGE_DETECTION')==='GOLD_POTENTIAL';$type=$isProspection?'GOLD_POTENTIAL':($result['metadata']['activity_class']??'SURFACE_CHANGE');
      $detection=$this->repo->create('change_detections',['mine_id'=>(int)$row['mine_id'],'monitoring_area_id'=>(int)$row['monitoring_area_id'],'reference_image_id'=>$reference['id'],'current_image_id'=>$current['id'],'type'=>$type,'severity'=>$result['severity'],'affected_area_hectares'=>(float)$result['affected_area_hectares'],'geometry'=>$geometry,'confidence'=>(float)$result['confidence'],'metadata_json'=>$result['metadata']],$tenant);
      $title=$isProspection?'Alvo espectral com potencial para ouro':'Alteração de superfície detectada';
      $description=$isProspection?sprintf('%.2f ha apresentam assinatura espectral compatível com minerais associados a ouro. É uma triagem remota e requer validação geológica e de campo.',$result['affected_area_hectares']):sprintf('%.2f ha de mudança entre %s e %s. Resultado automatizado; requer análise humana.',$result['affected_area_hectares'],$reference['acquisition_date'],$current['acquisition_date']);

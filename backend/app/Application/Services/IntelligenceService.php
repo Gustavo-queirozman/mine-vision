@@ -16,17 +16,19 @@ final class IntelligenceService
   $radar=count(array_filter($images,fn($i)=>$i['satellite']==='SENTINEL-1'&&$i['processing_status']==='COMPLETED'));
   $optical=count(array_filter($images,fn($i)=>$i['satellite']==='SENTINEL-2'&&$i['processing_status']==='COMPLETED'));
   $risk=(new ComplianceService($this->repo))->contextForArea($areaId,$tenant);
+  $records=$this->repo->all('exploration_records',$tenant,['monitoring_area_id'=>$areaId]);
   $best=$detections?max(array_column($detections,'confidence')):0;
   $affected=array_sum(array_column($detections,'affected_area_hectares'));
   $evidence=min(40,round($best*.4))+min(20,count($detections)*10)+min(15,$optical*3)+min(10,$radar*2);
   $access=15; // kept explicit until roads/infrastructure data is connected.
   $regulatoryPenalty=round($risk['risk_score']*.15);
-  $score=max(0,min(100,$evidence+$access-$regulatoryPenalty));
+  $fieldEvidence=min(15,count($records)*3);$score=max(0,min(100,$evidence+$access+$fieldEvidence-$regulatoryPenalty));
   $band=$score>=70?'PRIORITIZE_FIELD_VALIDATION':($score>=45?'REVIEW_GEOLOGY':($score>=20?'MONITOR':'INSUFFICIENT_EVIDENCE'));
   return ['monitoring_area_id'=>$areaId,'opportunity_score'=>$score,'recommendation'=>$band,'components'=>[
    ['name'=>'assinatura_espectral','points'=>min(40,round($best*.4)),'evidence'=>count($detections).' alvo(s), confiança máxima '.round($best,1).'%'],
    ['name'=>'cobertura_satelital','points'=>min(25,min(15,$optical*3)+min(10,$radar*2)),'evidence'=>"$optical óptica(s), $radar radar"],
    ['name'=>'acesso_base','points'=>$access,'evidence'=>'pontuação-base; conecte camada de vias para cálculo espacial'],
+   ['name'=>'evidencia_de_campo','points'=>$fieldEvidence,'evidence'=>count($records).' registro(s) de amostra/sondagem associado(s)'],
    ['name'=>'risco_regulatorio','points'=>-$regulatoryPenalty,'evidence'=>'prioridade '.$risk['priority']],
   ],'affected_hectares'=>round($affected,2),'disclaimer'=>'Score explicável de priorização. Não confirma ocorrência, teor, recurso ou reserva mineral; requer revisão geológica, direitos minerários e validação em campo.'];
  }
@@ -39,6 +41,15 @@ final class IntelligenceService
   elseif(str_contains(mb_strtolower($question),'alert')){$answer='Há '.count($open).' alerta(s) aberto(s) ou em investigação. '.(count($open)?'Priorize os de maior severidade, atribua responsável e crie uma inspeção com prazo.':'Não há alertas pendentes no momento.');$sources=[['type'=>'alerts','count'=>count($open)]];}
   else {$answer='Posso resumir alertas pendentes ou explicar o score de uma área. Informe monitoring_area_id para obter uma resposta baseada em evidências territoriais e espectrais.';}
   return ['answer'=>$answer,'sources'=>$sources,'limitations'=>'O copiloto consulta apenas dados da sua empresa no MineVision. Não substitui profissional habilitado, validação de campo ou parecer jurídico.'];
+ }
+ public function benchmark(int $mineId,Tenant $tenant): array {
+  $mine=$this->repo->find('mines',$mineId,$tenant);$areas=$this->repo->all('monitoring_areas',$tenant,['mine_id'=>$mineId]);$alerts=$this->repo->all('alerts',$tenant,['mine_id'=>$mineId]);$allAlerts=$this->repo->all('alerts',$tenant);
+  $open=count(array_filter($alerts,fn($a)=>in_array($a['status'],['OPEN','INVESTIGATING'],true)));$companyOpen=count(array_filter($allAlerts,fn($a)=>in_array($a['status'],['OPEN','INVESTIGATING'],true)));
+  return ['mine_id'=>$mine['id'],'mine'=>$mine['name'],'metrics'=>['monitored_hectares'=>round(array_sum(array_column($areas,'area_hectares')),2),'open_alerts'=>$open,'alerts_per_area'=>round($open/max(1,count($areas)),2),'company_average_alerts_per_mine'=>round($companyOpen/max(1,count($this->repo->all('mines',$tenant))),2)],'notice'=>'Benchmark interno da empresa; não compara operações de terceiros nem infere desempenho setorial.'];
+ }
+ public function timeline(int $areaId,Tenant $tenant): array {
+  $this->repo->find('monitoring_areas',$areaId,$tenant);$images=$this->repo->all('satellite_images',$tenant,['monitoring_area_id'=>$areaId]);$detections=$this->repo->all('change_detections',$tenant,['monitoring_area_id'=>$areaId]);
+  return ['monitoring_area_id'=>$areaId,'images'=>array_map(fn($i)=>['date'=>$i['acquisition_date'],'satellite'=>$i['satellite'],'cloud_percentage'=>$i['cloud_percentage'],'status'=>$i['processing_status']],$images),'events'=>array_map(fn($d)=>['date'=>$d['created_at'],'type'=>$d['type'],'severity'=>$d['severity'],'affected_hectares'=>$d['affected_area_hectares'],'activity_class'=>$d['metadata_json']['activity_class']??'UNCLASSIFIED'],$detections)];
  }
  public function createInspectionFromAlert(int $alertId,array $input,Tenant $tenant,ResourceService $resources): array {
   $tenant->allow(['ADMIN','ANALYST']);$alert=$this->repo->find('alerts',$alertId,$tenant);

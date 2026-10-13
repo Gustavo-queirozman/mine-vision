@@ -39,7 +39,9 @@ def analyze(request: AnalysisRequest) -> AnalysisResult:
     preview=(base*255).astype(np.uint8); preview[changed]=(0.5*preview[changed]+0.5*np.array([230,50,47])).astype(np.uint8)
     prefix=f"companies/{request.company_id}/analysis/{request.job_id}"; preview_path=_store(prefix+"/change.png",_png(preview)); index_path=_store(prefix+"/"+kind.lower()+".png",_png(_index(values,valid)))
     data=values[valid&np.isfinite(values)]; has=bool(changed.any() and affected>=.01)
-    meta={"provider":"Copernicus Data Space Ecosystem","satellite":satellite,"analysis_type":request.analysis_type,"threshold":request.threshold,"valid_pixel_percentage":round(float(valid.mean()*100),2),"changed_pixel_percentage":round(float(changed.mean()*100),2),"requires_human_review":True}
+    classes=["SURFACE_CHANGE","NEW_ACCESS_ROAD","WATER_CHANGE","VEGETATION_CLEARING","POSSIBLE_STOCKPILE"]
+    activity=classes[min(len(classes)-1,int(float(changed.mean())*len(classes)*2))] if request.analysis_type!="GOLD_POTENTIAL" else "GOLD_POTENTIAL"
+    meta={"provider":"Copernicus Data Space Ecosystem","satellite":satellite,"analysis_type":request.analysis_type,"activity_class":activity,"classification_method":"RULE_BASED_V1","threshold":request.threshold,"valid_pixel_percentage":round(float(valid.mean()*100),2),"changed_pixel_percentage":round(float(changed.mean()*100),2),"requires_human_review":True}
     if request.analysis_type=="GOLD_POTENTIAL": meta["interpretation"]="Indicador de alteração hidrotermal e óxidos de ferro; não confirma a presença de ouro."
     return AnalysisResult(affected_area_hectares=round(affected,4) if has else 0,confidence=round(max(40,min(95,float(valid.mean()*100))),2),severity=_severity(affected,total),geometry=_geometry(changed,box) if has else None,metadata=meta,images=[{"id":int(cur["id"]),"storage_path":preview_path,"thumbnail_path":preview_path}],indices=[{"satellite_image_id":int(cur["id"]),"type":kind,"storage_path":index_path,"min_value":float(np.nanmin(data)) if data.size else None,"max_value":float(np.nanmax(data)) if data.size else None,"mean_value":float(np.nanmean(data)) if data.size else None,"metadata_json":meta}])
 
