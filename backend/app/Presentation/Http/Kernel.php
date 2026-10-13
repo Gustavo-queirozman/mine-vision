@@ -2,7 +2,7 @@
 declare(strict_types=1);
 namespace App\Presentation\Http;
 use App\Domain\{ApiException,Tenant,Schema};
-use App\Application\Services\{AuthService,ResourceService,MonitoringService,JobService,ReportService,ComplianceService,OfficialLayerSyncService};
+use App\Application\Services\{AuthService,ResourceService,MonitoringService,JobService,ReportService,ComplianceService,OfficialLayerSyncService,IntelligenceService};
 use App\Application\DTO\ResourceRequest;
 use App\Infrastructure\{Database,RateLimiter};
 use App\Infrastructure\Repositories\TenantRepository;
@@ -43,7 +43,9 @@ final class Kernel
   if($path==='/api/v1/auth/logout'&&$method==='POST'){$this->auth->logout($user);return $this->ok(['logged_out'=>true]);}
   if($path==='/api/v1/dashboard/summary'&&$method==='GET')return $this->ok($this->monitoring->dashboard($tenant));
   if($path==='/api/v1/map/features'&&$method==='GET')return $this->ok($this->monitoring->map($tenant));
+  if($path==='/api/v1/copilot/query'&&$method==='POST')return $this->ok((new IntelligenceService($this->repo))->copilot($input,$tenant));
   if(preg_match('#^/api/v1/monitoring-areas/(\d+)/risk-context$#',$path,$matches)&&$method==='GET')return $this->ok((new ComplianceService($this->repo))->contextForArea((int)$matches[1],$tenant));
+  if(preg_match('#^/api/v1/monitoring-areas/(\d+)/opportunity-score$#',$path,$matches)&&$method==='GET')return $this->ok((new IntelligenceService($this->repo))->opportunity((int)$matches[1],$tenant));
   if(preg_match('#^/api/v1/monitoring-areas/(\d+)/official-layers/sync$#',$path,$matches)&&$method==='POST')return $this->ok((new OfficialLayerSyncService($this->repo))->sync((int)$matches[1],$tenant));
   if(preg_match('#^/api/v1/mines/(\d+)/monitoring-areas$#',$path,$matches)&&$method==='GET'){$this->repo->find('mines',(int)$matches[1],$tenant);return ['status'=>200,'body'=>$this->repo->list('monitoring_areas',$tenant,[...$query,'mine_id'=>(int)$matches[1]])];}
   if(preg_match('#^/api/v1/monitoring-areas/(\d+)/(?:satellite-images|mock-images)$#',$path,$matches)&&$method==='POST')return $this->ok($this->monitoring->acquire((int)$matches[1],$input,$tenant),201);
@@ -58,13 +60,14 @@ final class Kernel
    foreach(array_keys($input) as $key)if($key!=='status')throw new ApiException(422,'Este endpoint aceita somente status.');
    return $this->ok($this->resources->update('alerts',(int)$matches[1],$input,$tenant));
   }
+  if(preg_match('#^/api/v1/alerts/(\d+)/create-inspection$#',$path,$matches)&&$method==='POST')return $this->ok((new IntelligenceService($this->repo))->createInspectionFromAlert((int)$matches[1],$input,$tenant,$this->resources),201);
   if(preg_match('#^/api/v1/inspections/(\d+)/images$#',$path,$matches)&&$method==='POST')return $this->ok($this->upload((int)$matches[1],$input,$files,$tenant),201);
   if(preg_match('#^/api/v1/inspection-images/(\d+)/content$#',$path,$matches)&&$method==='GET'){$image=$this->repo->find('inspection_images',(int)$matches[1],$tenant);$object=(new ObjectStorage())->get($image['storage_path']);return $this->raw($object['body'],$object['mime']);}
   if(preg_match('#^/api/v1/reports/(\d+)/html$#',$path,$matches)&&$method==='GET'){$record=$this->repo->find('reports',(int)$matches[1],$tenant);return $this->raw((new ReportService($this->repo,$this->resources,new ObjectStorage()))->html($record),'text/html; charset=utf-8');}
   if(preg_match('#^/api/v1/reports/(\d+)/pdf$#',$path,$matches)&&$method==='GET'){$record=$this->repo->find('reports',(int)$matches[1],$tenant);$filename='relatorio-minevision-'.$record['id'].'.pdf';return ['status'=>200,'body'=>(new ReportService($this->repo,$this->resources,new ObjectStorage()))->pdf($record),'headers'=>['Content-Type'=>'application/pdf','Content-Disposition'=>'attachment; filename="'.$filename.'"','X-Content-Type-Options'=>'nosniff','Cache-Control'=>'private, no-store']];}
   if(preg_match('#^/api/v1/([a-z-]+)(?:/(\d+))?$#',$path,$matches)){
    $table=Schema::table($matches[1]);$id=isset($matches[2])?(int)$matches[2]:null;
-   if($table==='users')$tenant->allow(['ADMIN','ANALYST']);
+   if($table==='users'||$table==='audit_events')$tenant->allow(['ADMIN','ANALYST']);
    if($table==='notification_rules')$tenant->allow(['ADMIN']);
    if($method==='GET')return $id?$this->ok($this->repo->find($table,$id,$tenant)):['status'=>200,'body'=>$this->repo->list($table,$tenant,$query)];
    if($method==='POST'&&!$id){

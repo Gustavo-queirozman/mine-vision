@@ -12,7 +12,7 @@ final class TenantRepository
  public function normalize(array $record): array {
   if(array_key_exists('geometry_json',$record)){$record['geometry']=$record['geometry_json'];unset($record['geometry_json']);}
   foreach($record as $field=>$value) {
-   if(in_array($field,['geometry','metadata_json','content_json','result_json'],true)&&is_string($value))$record[$field]=json_decode($value,true,512,JSON_THROW_ON_ERROR);
+   if(in_array($field,['geometry','metadata_json','content_json','result_json','payload_json'],true)&&is_string($value))$record[$field]=json_decode($value,true,512,JSON_THROW_ON_ERROR);
    elseif($value!==null&&($field==='id'||str_ends_with($field,'_id')||$field==='attempts'))$record[$field]=(int)$value;
    elseif($value!==null&&in_array($field,['latitude','longitude','area_hectares','affected_area_hectares','confidence','cloud_percentage','min_value','max_value','mean_value','threshold'],true))$record[$field]=(float)$value;
    elseif(in_array($field,['active','monitoring_enabled','email_enabled','webhook_enabled'],true))$record[$field]=in_array($value,[true,1,'1','t','true'],true);

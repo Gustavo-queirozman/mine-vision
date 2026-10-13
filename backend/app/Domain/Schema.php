@@ -20,8 +20,9 @@ final class Schema
  'reports'=>['mine_id'=>'id:mines!','title'=>'text!','type'=>'enum:MONITORING,CHANGES,INSPECTION,EXECUTIVE!','period_start'=>'date!','period_end'=>'date!'],
  'notification_rules'=>['name'=>'text!','event_type'=>'text!','minimum_severity'=>'enum:LOW,MEDIUM,HIGH,CRITICAL!','email_enabled'=>'bool','webhook_enabled'=>'bool','webhook_url'=>'url','active'=>'bool'],
  'analysis_jobs'=>['mine_id'=>'id:mines!','monitoring_area_id'=>'id:monitoring_areas!','reference_image_id'=>'id:satellite_images!','current_image_id'=>'id:satellite_images!','analysis_type'=>'enum:CHANGE_DETECTION,GOLD_POTENTIAL','threshold'=>'threshold'],
+ 'audit_events'=>['actor_user_id'=>'id:users','action'=>'text!','resource_type'=>'text!','resource_id'=>'positive','payload_json'=>'json'],
  ];
- public const TABLES=['companies','users','mines','monitoring_areas','compliance_layers','satellite_images','spectral_indices','change_detections','alerts','inspections','inspection_images','reports','notification_rules','analysis_jobs'];
+ public const TABLES=['companies','users','mines','monitoring_areas','compliance_layers','satellite_images','spectral_indices','change_detections','alerts','inspections','inspection_images','reports','notification_rules','analysis_jobs','audit_events'];
  public static function table(string $resource): string {
   $table=str_replace('-','_',$resource);
   if (!in_array($table,self::TABLES,true)) throw new ApiException(404,'Recurso não encontrado.');

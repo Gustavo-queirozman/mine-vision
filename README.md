@@ -113,3 +113,14 @@ compose.yaml     Orquestração local de todos os serviços
 ```
 
 Saídas de relatórios, dados temporários, builds, caches, dependências instaladas e arquivos de ambiente são ignorados pelo Git. Os modelos seguros de configuração (`.env.example`) permanecem versionados.
+
+## Inteligência operacional
+
+Além do monitoramento óptico e radar Sentinel, a API disponibiliza recursos de decisão explicáveis:
+
+- `GET /api/v1/monitoring-areas/{id}/opportunity-score`: prioriza a validação de alvos a partir de assinaturas espectrais, cobertura Sentinel e contexto regulatório. Não estima reservas.
+- `POST /api/v1/copilot/query`: responde a perguntas usando somente o contexto da empresa autenticada; informe `question` e, opcionalmente, `monitoring_area_id`.
+- `POST /api/v1/alerts/{id}/create-inspection`: transforma um alerta aberto em inspeção atribuída, usando `inspector_user_id`, `scheduled_at` e `notes`.
+- `GET /api/v1/audit-events`: fornece a trilha de criação, alteração e remoção para administradores e analistas.
+
+As conclusões automatizadas são apoio à decisão e precisam de validação geológica, de campo e regulatória antes de qualquer ação operacional.
