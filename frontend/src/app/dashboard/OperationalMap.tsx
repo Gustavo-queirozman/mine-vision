@@ -38,6 +38,7 @@ const layerDescriptions: Record<string, string> = {
   alerts: "Ocorrências que exigem acompanhamento da equipe.",
   inspections: "Inspeções de campo e seus locais associados.",
 };
+const layerOrder = ["mines", "monitoring_areas", "compliance_layers", "change_detections", "alerts", "inspections"];
 const baseLayers = {
   satellite: { url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attribution: "Tiles © Esri" },
   terrain: { url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", attribution: "© OpenStreetMap contributors © CARTO" },
@@ -45,7 +46,7 @@ const baseLayers = {
 const defaultCenter: Position = [-44.0, -18.5];
 
 export default function OperationalMap({ mode = "view", features = [], point, polygon = [], fullScreen = false, onPointChange, onPolygonChange, onFeatureSelect, onLayerSelect }: { mode?: "view" | "point" | "polygon"; features?: MapFeature[]; point?: Position; polygon?: Position[]; fullScreen?: boolean; onPointChange?: (point: Position) => void; onPolygonChange?: (points: Position[]) => void; onFeatureSelect?: (feature: MapFeature) => void; onLayerSelect?: (layer: MapLayer) => void }) {
-  const element = useRef<HTMLDivElement>(null), map = useRef<any>(undefined), data = useRef<any>(undefined), draft = useRef<any>(undefined), tiles = useRef<any>(undefined);
+  const element = useRef<HTMLDivElement>(null), map = useRef<any>(undefined), data = useRef<any>(undefined), draft = useRef<any>(undefined), tiles = useRef<any>(undefined), fittedData = useRef<string | undefined>(undefined);
   const callbacks = useRef({ onPointChange, onPolygonChange, onFeatureSelect, mode, polygon });
   const [message, setMessage] = useState("Carregando mapa…");
   const [ready, setReady] = useState(false);
@@ -105,7 +106,9 @@ export default function OperationalMap({ mode = "view", features = [], point, po
       layer.on("click", () => callbacks.current.onFeatureSelect?.(feature)); group.addLayer(layer);
     });
     group.addTo(instance); data.current = group;
-    if (mode === "view" && features.length) { const bounds = group.getBounds(); if (bounds.isValid()) instance.fitBounds(bounds.pad(.15)); }
+    // Preserve o enquadramento durante seleções; somente dados novos devem ajustar o zoom.
+    const dataKey = JSON.stringify(features.map(feature => [feature.id, feature.properties.resource, feature.geometry]));
+    if (mode === "view" && features.length && fittedData.current !== dataKey) { const bounds = group.getBounds(); if (bounds.isValid()) { instance.fitBounds(bounds.pad(.15)); fittedData.current = dataKey; } }
   }, [features, mode, ready]);
 
   useEffect(() => {
@@ -117,8 +120,9 @@ export default function OperationalMap({ mode = "view", features = [], point, po
     group.addTo(instance); draft.current = group;
   }, [mode, point?.[0], point?.[1], polygon, ready]);
 
-  const presentResources = [...new Set(features.map(feature => String(feature.properties.resource)).filter(resource => layerNames[resource]))];
-  const layers = presentResources.map(resource => ({ resource, name: layerNames[resource], description: layerDescriptions[resource] ?? "Elementos geográficos desta camada.", count: features.filter(feature => String(feature.properties.resource) === resource).length, color: colors[resource] ?? "#64748b" }));
+  // As categorias continuam visíveis mesmo sem geometrias, para deixar claro
+  // quais camadas fazem parte da leitura territorial.
+  const layers = layerOrder.map(resource => ({ resource, name: layerNames[resource], description: layerDescriptions[resource] ?? "Elementos geográficos desta camada.", count: features.filter(feature => String(feature.properties.resource) === resource).length, color: colors[resource] ?? "#64748b" }));
   return <div className={`operational-map relative overflow-hidden rounded-xl border border-slate-700 ${fullScreen ? "operational-map-fullscreen" : ""}`}>
     <div ref={element} className={mode === "view" ? "h-[440px] w-full bg-slate-800" : "h-72 w-full bg-slate-800"} />
     {mode === "view" && <><div className="map-title"><span className="map-title-dot" />Monitoramento territorial</div><div className="map-toolbar" aria-label="Estilo do mapa"><button type="button" onClick={() => setBaseLayer("satellite")} className={baseLayer === "satellite" ? "active" : ""}>Satélite</button><button type="button" onClick={() => setBaseLayer("terrain")} className={baseLayer === "terrain" ? "active" : ""}>Claro</button></div><div className="map-zoom" aria-label="Controles de zoom"><button type="button" aria-label="Aproximar mapa" onClick={() => map.current?.zoomIn()}>+</button><button type="button" aria-label="Afastar mapa" onClick={() => map.current?.zoomOut()}>−</button></div>{layers.length > 0 && <div className="map-legend" aria-label="Camadas do mapa">{layers.map(layer => <button type="button" key={layer.resource} onClick={() => onLayerSelect?.(layer)} title={layer.description}><i style={{ backgroundColor: layer.color }} />{layer.name} <b>{layer.count}</b></button>)}</div>}<div className="map-north" aria-hidden="true"><b>▲</b><span>N</span></div></>}
